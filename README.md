@@ -1,10 +1,10 @@
-### Passing varibales based onthe environment through .fvars
+# Passing varibales based onthe environment through .fvars
 ```
     terraform plan -var-file=uat.tfvars
     terraform apply -var-file=uat.tfvars
 ```
 
-### If you want to destroy the module you can use this below commands
+If you want to destroy the module you can use this below commands
 # # # List of terraform modules that you want to delete
 ```bash
 terraform state list
