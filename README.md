@@ -5,7 +5,7 @@
 ```
 
 If you want to destroy the module you can use this below commands
-# # # List of terraform modules that you want to delete
+## List of terraform modules that you want to delete
 ```bash
 terraform state list
 
