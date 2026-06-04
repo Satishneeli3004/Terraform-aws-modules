@@ -77,3 +77,13 @@ variable "security_groups" {
 variable "ami_id" {
   type = string
 }
+
+variable "master_instance_type" {
+  type = string
+  # default = "t3.medium"
+}
+
+variable "worker_instance_type" {
+  type = string
+  # default = "t3.medium"
+}

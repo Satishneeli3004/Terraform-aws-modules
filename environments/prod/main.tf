@@ -38,7 +38,8 @@ module "public_subnet" {
   subnet_cidrs = var.public_subnet_cidrs
 
   availability_zones = [
-    "ap-south-1a"
+    "ap-south-1a",
+    "ap-south-1b"
   ]
 
   public_subnet = true
@@ -58,7 +59,8 @@ module "private_subnet" {
   subnet_cidrs = var.private_subnet_cidrs
 
   availability_zones = [
-    "ap-south-1a"
+    "ap-south-1a",
+    "ap-south-1b"
   ]
 
   public_subnet = false
@@ -131,11 +133,11 @@ module "keypair" {
   tags = local.common_tags
 }
 
-module "webserver" {
+module "Deploy-Bastion-Host" {
 
   source = "../../modules/ec2"
 
-  instance_name = "webserver"
+  instance_name = "Bastion-server"
 
   ami_id = var.ami_id
 
@@ -144,7 +146,7 @@ module "webserver" {
   subnet_id = module.public_subnet.subnet_ids[0]
 
   security_group_ids = [
-    module.security_groups["app"].security_group_id
+    module.security_groups["bastion"].security_group_id
   ]
 
   key_name = module.keypair.key_name
@@ -178,48 +180,138 @@ module "webserver" {
 #   tags = local.common_tags
 # }
 
-module "acentralserver" {
+module "k8s_master" {
 
-  source = "../../modules/ec2"
+  source = "../../modules/k8s_node"
 
-  instance_name = "appserver"
+  instance_name = "${var.client_name}-${var.environment}-master"
 
   ami_id = var.ami_id
 
-  instance_type = "t3.micro"
+  instance_type = var.master_instance_type
 
   subnet_id = module.private_subnet.subnet_ids[0]
 
   security_group_ids = [
-    module.security_groups["central"].security_group_id
+    module.security_groups["k8s-master"].security_group_id
   ]
 
   key_name = module.keypair.key_name
 
-  user_data = file("${path.module}/userdata/mysql.sh")
+  user_data = file("${path.module}/userdata/master.sh")
+
+  volume_size = 20
 
   tags = local.common_tags
 }
 
-module "testserver" {
+module "worker1" {
 
-  source = "../../modules/ec2"
+  source = "../../modules/k8s_node"
 
-  instance_name = "appserver"
+  instance_name = "${var.client_name}-${var.environment}-worker1"
 
   ami_id = var.ami_id
 
-  instance_type = "t3.micro"
+  instance_type = var.worker_instance_type
 
   subnet_id = module.private_subnet.subnet_ids[0]
 
   security_group_ids = [
-    module.security_groups["test"].security_group_id
+    module.security_groups["k8s-worker"].security_group_id
   ]
 
   key_name = module.keypair.key_name
 
-  user_data = file("${path.module}/userdata/mysql.sh")
+  user_data = file("${path.module}/userdata/worker1.sh")
+
+  volume_size = 15
 
   tags = local.common_tags
+}
+
+module "worker2" {
+
+  source = "../../modules/k8s_node"
+
+  instance_name = "${var.client_name}-${var.environment}-worker2"
+
+  ami_id = var.ami_id
+
+  instance_type = var.worker_instance_type
+
+  subnet_id = module.private_subnet.subnet_ids[0]
+
+  security_group_ids = [
+    module.security_groups["k8s-worker"].security_group_id
+  ]
+
+  key_name = module.keypair.key_name
+
+  user_data = file("${path.module}/userdata/worker2.sh")
+
+  volume_size = 15
+
+  tags = local.common_tags
+}
+
+module "alb" {
+
+  source = "../../modules/alb"
+
+  alb_name = "${var.client_name}-${var.environment}-alb"
+
+  subnet_ids = module.public_subnet.subnet_ids
+
+  security_group_ids = [
+    module.security_groups["alb"].security_group_id
+  ]
+
+  internal = false
+
+  tags = local.common_tags
+}
+
+module "nginx_tg" {
+
+  source = "../../modules/target_group"
+
+  name = "nginx-ingress"
+
+  port = 30080
+
+  protocol = "HTTP"
+
+  vpc_id = module.vpc.vpc_id
+
+  tags = local.common_tags
+}
+
+module "worker_attachments" {
+
+  for_each = {
+    worker1 = module.worker1.instance_id
+    worker2 = module.worker2.instance_id
+  }
+
+  source = "../../modules/target_group_attachment"
+
+  target_group_arn = module.nginx_tg.target_group_arn
+
+  target_id = each.value
+
+  port = 30080
+}
+
+module "listener_http" {
+
+  source = "../../modules/listener"
+
+  load_balancer_arn = module.alb.alb_arn
+
+  target_group_arn = module.nginx_tg.target_group_arn
+
+  port = 80
+
+  protocol = "HTTP"
 }
