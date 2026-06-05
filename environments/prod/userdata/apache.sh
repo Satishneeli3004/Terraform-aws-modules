@@ -44,3 +44,5 @@ echo "Apache installation and configuration completed."
 
 echo "Apache status:"
 sudo systemctl status apache2 --no-pager
+
+

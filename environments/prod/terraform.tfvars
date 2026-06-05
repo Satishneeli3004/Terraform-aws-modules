@@ -8,8 +8,8 @@ cidr_block               = "10.0.0.0/16"
 vpc_name                 = "arka-prod-vpc"
 public_route_table_name  = "public-rt"
 private_route_table_name = "private-rt"
-private_subnet_cidrs     = ["10.0.4.0/24","10.0.3.0/24"]
-public_subnet_cidrs      = ["10.0.5.0/24","10.0.2.0/24"]
+private_subnet_cidrs     = ["10.0.4.0/24", "10.0.3.0/24"]
+public_subnet_cidrs      = ["10.0.5.0/24", "10.0.2.0/24"]
 # security_groups = {
 
 #   bastion = {
@@ -105,7 +105,7 @@ security_groups = {
         protocol    = "tcp"
 
         cidr_blocks = [
-          "175.101.156.183/32"
+          "175.101.156.213/32"
         ]
       }
 
@@ -180,18 +180,18 @@ security_groups = {
 
       {
         description = "HTTP Access"
-        from_port = 80
-        to_port   = 80
-        protocol  = "tcp"
+        from_port   = 80
+        to_port     = 80
+        protocol    = "tcp"
 
         cidr_blocks = ["0.0.0.0/0"]
       },
 
       {
         description = "HTTPS Access"
-        from_port = 443
-        to_port   = 443
-        protocol  = "tcp"
+        from_port   = 443
+        to_port     = 443
+        protocol    = "tcp"
 
         cidr_blocks = ["0.0.0.0/0"]
       }

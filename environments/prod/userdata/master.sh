@@ -57,5 +57,20 @@ echo "=== Verifying installation ==="
 kubeadm version
 kubectl version --client || true
 
+# Initialize cluster
+# sudo kubeadm init --pod-network-cidr=192.168.0.0/16
+sudo kubeadm init --kubernetes-version=v1.34.0 --pod-network-cidr=192.168.0.0/16
+# Setup kubectl for regular user
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+# Install Calico network
+kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.29.3/manifests/calico.yaml
+
+# Save join command for worker
+# kubeadm token create --print-join-command
+kubeadm token create --print-join-command > ~/join-command.txt
+
 echo "=== Master node setup completed ==="
-echo "Next step: run kubeadm init manually"
+echo "Next step: run kubeadm join manually on worker node"
