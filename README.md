@@ -35,3 +35,7 @@ output:-
 ```bash
     terraform apply -replace="module.appserver.aws_instance.this"
 ```
+# Passing variables from different path
+```bash
+    terraform plan -var=environment/prod/terraform.tfvars 
+```
