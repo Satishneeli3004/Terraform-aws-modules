@@ -2,6 +2,28 @@
 hostnamectl set-hostname worker2
 set -e
 
+echo "=== Installing containerd & docker  ==="
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo apt install -y containerd
+
+sudo mkdir -p /etc/containerd
+containerd config default | sudo tee /etc/containerd/config.toml >/dev/null
+
+sudo sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
+
+sudo systemctl restart containerd
+sudo systemctl enable containerd
+sudo systemctl start docker
+sudo systemctl enable docker
+sudo usermod -aG docker $USER
+echo ""
+echo "===== Docker Installation Complete ====="
+echo "👉 Verify: docker --version"
+
+
+echo "=== Lets Start Installing Kubernetes tools ==="
+
 echo "=== Disabling swap ==="
 sudo swapoff -a
 sudo sed -i '/ swap / s/^/#/' /etc/fstab
@@ -23,18 +45,6 @@ net.ipv4.ip_forward=1
 EOF
 
 sudo sysctl --system
-
-echo "=== Installing containerd ==="
-sudo apt update
-sudo apt install -y containerd
-
-sudo mkdir -p /etc/containerd
-containerd config default | sudo tee /etc/containerd/config.toml >/dev/null
-
-sudo sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
-
-sudo systemctl restart containerd
-sudo systemctl enable containerd
 
 echo "=== Installing Kubernetes tools ==="
 sudo apt update
