@@ -180,138 +180,138 @@ module "Deploy-Bastion-Host" {
 #   tags = local.common_tags
 # }
 
-module "k8s_master" {
+# module "k8s_master" {
 
-  source = "../../modules/k8s_node"
+#   source = "../../modules/k8s_node"
 
-  instance_name = "${var.client_name}-${var.environment}-master"
+#   instance_name = "${var.client_name}-${var.environment}-master"
 
-  ami_id = var.ami_id
+#   ami_id = var.ami_id
 
-  instance_type = var.master_instance_type
+#   instance_type = var.master_instance_type
 
-  subnet_id = module.private_subnet.subnet_ids[0]
+#   subnet_id = module.private_subnet.subnet_ids[0]
 
-  security_group_ids = [
-    module.security_groups["k8s-master"].security_group_id
-  ]
+#   security_group_ids = [
+#     module.security_groups["k8s-master"].security_group_id
+#   ]
 
-  key_name = module.keypair.key_name
+#   key_name = module.keypair.key_name
 
-  user_data = file("${path.module}/userdata/master.sh")
+#   user_data = file("${path.module}/userdata/master.sh")
 
-  volume_size = 20
+#   volume_size = 20
 
-  tags = local.common_tags
-}
+#   tags = local.common_tags
+# }
 
-module "worker1" {
+# module "worker1" {
 
-  source = "../../modules/k8s_node"
+#   source = "../../modules/k8s_node"
 
-  instance_name = "${var.client_name}-${var.environment}-worker1"
+#   instance_name = "${var.client_name}-${var.environment}-worker1"
 
-  ami_id = var.ami_id
+#   ami_id = var.ami_id
 
-  instance_type = var.worker_instance_type
+#   instance_type = var.worker_instance_type
 
-  subnet_id = module.private_subnet.subnet_ids[0]
+#   subnet_id = module.private_subnet.subnet_ids[0]
 
-  security_group_ids = [
-    module.security_groups["k8s-worker"].security_group_id
-  ]
+#   security_group_ids = [
+#     module.security_groups["k8s-worker"].security_group_id
+#   ]
 
-  key_name = module.keypair.key_name
+#   key_name = module.keypair.key_name
 
-  user_data = file("${path.module}/userdata/worker1.sh")
+#   user_data = file("${path.module}/userdata/worker1.sh")
 
-  volume_size = 15
+#   volume_size = 15
 
-  tags = local.common_tags
-}
+#   tags = local.common_tags
+# }
 
-module "worker2" {
+# module "worker2" {
 
-  source = "../../modules/k8s_node"
+#   source = "../../modules/k8s_node"
 
-  instance_name = "${var.client_name}-${var.environment}-worker2"
+#   instance_name = "${var.client_name}-${var.environment}-worker2"
 
-  ami_id = var.ami_id
+#   ami_id = var.ami_id
 
-  instance_type = var.worker_instance_type
+#   instance_type = var.worker_instance_type
 
-  subnet_id = module.private_subnet.subnet_ids[0]
+#   subnet_id = module.private_subnet.subnet_ids[0]
 
-  security_group_ids = [
-    module.security_groups["k8s-worker"].security_group_id
-  ]
+#   security_group_ids = [
+#     module.security_groups["k8s-worker"].security_group_id
+#   ]
 
-  key_name = module.keypair.key_name
+#   key_name = module.keypair.key_name
 
-  user_data = file("${path.module}/userdata/worker2.sh")
+#   user_data = file("${path.module}/userdata/worker2.sh")
 
-  volume_size = 15
+#   volume_size = 15
 
-  tags = local.common_tags
-}
+#   tags = local.common_tags
+# }
 
-module "alb" {
+# module "alb" {
 
-  source = "../../modules/alb"
+#   source = "../../modules/alb"
 
-  alb_name = "${var.client_name}-${var.environment}-alb"
+#   alb_name = "${var.client_name}-${var.environment}-alb"
 
-  subnet_ids = module.public_subnet.subnet_ids
+#   subnet_ids = module.public_subnet.subnet_ids
 
-  security_group_ids = [
-    module.security_groups["alb"].security_group_id
-  ]
+#   security_group_ids = [
+#     module.security_groups["alb"].security_group_id
+#   ]
 
-  internal = false
+#   internal = false
 
-  tags = local.common_tags
-}
+#   tags = local.common_tags
+# }
 
-module "nginx_tg" {
+# module "nginx_tg" {
 
-  source = "../../modules/target_group"
+#   source = "../../modules/target_group"
 
-  name = "nginx-ingress"
+#   name = "nginx-ingress"
 
-  port = 30080
+#   port = 30080
 
-  protocol = "HTTP"
+#   protocol = "HTTP"
 
-  vpc_id = module.vpc.vpc_id
+#   vpc_id = module.vpc.vpc_id
 
-  tags = local.common_tags
-}
+#   tags = local.common_tags
+# }
 
-module "worker_attachments" {
+# module "worker_attachments" {
 
-  for_each = {
-    worker1 = module.worker1.instance_id
-    worker2 = module.worker2.instance_id
-  }
+#   for_each = {
+#     worker1 = module.worker1.instance_id
+#     worker2 = module.worker2.instance_id
+#   }
 
-  source = "../../modules/target_group_attachment"
+#   source = "../../modules/target_group_attachment"
 
-  target_group_arn = module.nginx_tg.target_group_arn
+#   target_group_arn = module.nginx_tg.target_group_arn
 
-  target_id = each.value
+#   target_id = each.value
 
-  port = 30080
-}
+#   port = 30080
+# }
 
-module "listener_http" {
+# module "listener_http" {
 
-  source = "../../modules/listener"
+#   source = "../../modules/listener"
 
-  load_balancer_arn = module.alb.alb_arn
+#   load_balancer_arn = module.alb.alb_arn
 
-  target_group_arn = module.nginx_tg.target_group_arn
+#   target_group_arn = module.nginx_tg.target_group_arn
 
-  port = 80
+#   port = 80
 
-  protocol = "HTTP"
-}
+#   protocol = "HTTP"
+# }

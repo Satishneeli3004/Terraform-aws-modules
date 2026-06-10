@@ -13,7 +13,7 @@ module "vpc" {
 
   tags = {
     Terraform   = "true"
-    Environment = "dev"
+    Environment = "Prod"
   }
 }
 
@@ -21,7 +21,7 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 21.0"
 
-  name               = "prod-eks"
+  name               = "prod-eks-cluster"
   kubernetes_version = "1.33"
 
   vpc_id     = module.vpc.vpc_id
@@ -31,13 +31,14 @@ module "eks" {
     default = {
       desired_size   = 2
       min_size       = 1
-      max_size       = 3
+      max_size       = 2
       instance_types = ["t3.small"]
     }
   }
 
+
   tags = {
-    Environment = "dev"
+    Environment = "Prod"
     Terraform   = "true"
   }
 }
