@@ -87,6 +87,7 @@ public_subnet_cidrs      = ["10.0.5.0/24", "10.0.2.0/24"]
 # }
 
 ami_id               = "ami-07a00cf47dbbc844c"
+windows_ami_id       = "ami-05fdee25803e36cbc"
 worker_instance_type = "t3.small"
 master_instance_type = "t3.small"
 
@@ -105,7 +106,27 @@ security_groups = {
         protocol    = "tcp"
 
         cidr_blocks = [
-          "175.101.156.213/32"
+          "175.101.156.175/32"
+        ]
+      }
+
+    ]
+  }
+
+  windows = {
+
+    description = "windows-instance-sg"
+
+    ingress_rules = [
+
+      {
+        description = "RDP Access"
+        from_port   = 3389
+        to_port     = 3389
+        protocol    = "tcp"
+
+        cidr_blocks = [
+          "175.101.156.175/32"
         ]
       }
 

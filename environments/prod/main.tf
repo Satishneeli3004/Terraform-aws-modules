@@ -142,6 +142,7 @@ module "Deploy-Bastion-Host" {
   ami_id = var.ami_id
 
   instance_type = "t3.micro"
+  root_volume_size = 20
 
   subnet_id = module.public_subnet.subnet_ids[0]
 
@@ -156,6 +157,30 @@ module "Deploy-Bastion-Host" {
   tags = local.common_tags
 }
 
+# module "Deploy-Windows-server" {
+
+#   source = "../../modules/ec2"
+
+#   instance_name = "Windows-server"
+
+#   # ami_id = var.ami_id
+#   ami_id = var.windows_ami_id
+
+#   instance_type = "t3.micro"
+#   root_volume_size = 30
+
+#   subnet_id = module.public_subnet.subnet_ids[0]
+
+#   security_group_ids = [
+#     module.security_groups["windows"].security_group_id
+#   ]
+
+#   key_name = module.keypair.key_name
+
+#   user_data = file("${path.module}/userdata/apache.sh")
+
+#   tags = local.common_tags
+# }
 
 # module "appserver" {
 
@@ -164,7 +189,8 @@ module "Deploy-Bastion-Host" {
 #   instance_name = "appserver"
 
 #   ami_id = var.ami_id
-
+#   root_volume_size = 20
+  
 #   instance_type = "t3.micro"
 
 #   subnet_id = module.private_subnet.subnet_ids[0]
