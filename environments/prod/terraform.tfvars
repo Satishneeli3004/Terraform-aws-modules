@@ -4,12 +4,15 @@ project_name             = "networking"
 igw_name                 = "arka-prod-igw"
 nat_name                 = "arka-prod-nat"
 sg_name                  = "arka-prod-sg"
-cidr_block               = "10.0.0.0/16"
+# cidr_block               = "10.0.0.0/16"
+cidr_block               = "192.0.0.0/16"
 vpc_name                 = "arka-prod-vpc"
 public_route_table_name  = "public-rt"
 private_route_table_name = "private-rt"
-private_subnet_cidrs     = ["10.0.4.0/24", "10.0.3.0/24"]
-public_subnet_cidrs      = ["10.0.5.0/24", "10.0.2.0/24"]
+# private_subnet_cidrs     = ["10.0.4.0/24", "10.0.3.0/24"]
+# public_subnet_cidrs      = ["10.0.5.0/24", "10.0.2.0/24"]
+private_subnet_cidrs     = ["192.0.4.0/24", "192.0.3.0/24"]
+public_subnet_cidrs      = ["192.0.5.0/24", "192.0.2.0/24"]
 # security_groups = {
 
 #   bastion = {
@@ -106,7 +109,7 @@ security_groups = {
         protocol    = "tcp"
 
         cidr_blocks = [
-          "175.101.156.175/32"
+          "175.101.156.171/32"
         ]
       }
 
@@ -126,7 +129,7 @@ security_groups = {
         protocol    = "tcp"
 
         cidr_blocks = [
-          "175.101.156.175/32"
+          "175.101.156.171/32"
         ]
       }
 
