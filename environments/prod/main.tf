@@ -182,29 +182,29 @@ module "Deploy-Bastion-Host" {
 #   tags = local.common_tags
 # }
 
-# module "appserver" {
+module "appserver" {
 
-#   source = "../../modules/ec2"
+  source = "../../modules/ec2"
 
-#   instance_name = "appserver"
+  instance_name = "appserver"
 
-#   ami_id = var.ami_id
-#   root_volume_size = 20
+  ami_id = var.ami_id
+  root_volume_size = 20
   
-#   instance_type = "t3.micro"
+  instance_type = "t3.micro"
 
-#   subnet_id = module.private_subnet.subnet_ids[0]
+  subnet_id = module.private_subnet.subnet_ids[0]
 
-#   security_group_ids = [
-#     module.security_groups["bastion"].security_group_id
-#   ]
+  security_group_ids = [
+    module.security_groups["bastion"].security_group_id
+  ]
 
-#   key_name = module.keypair.key_name
+  key_name = module.keypair.key_name
 
-#   user_data = file("${path.module}/userdata/mysql.sh")
+  user_data = file("${path.module}/userdata/mysql.sh")
 
-#   tags = local.common_tags
-# }
+  tags = local.common_tags
+}
 
 # module "k8s_master" {
 
