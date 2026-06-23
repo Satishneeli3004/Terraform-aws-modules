@@ -29,12 +29,9 @@ variable "private_route_table_name" {
   type = string
 }
 
-variable "private_subnet_cidrs" {
-  type        = list(string)
-  description = "CIDR blocks for private subnets"
-}
 
-variable "public_subnet_cidrs" { 
+
+variable "public_subnet_cidrs" {
   type        = list(string)
   description = "CIDR blocks for private subnets"
 }
@@ -56,17 +53,6 @@ variable "allowed_ips" {
   default = ["0.0.0.0/0"]
 }
 
-# variable "app_sg_rules" {
-#   description = "Application Security Group Rules"
-
-#   type = list(object({
-#     from_port   = number
-#     to_port     = number
-#     protocol    = string
-#     cidr_blocks = list(string)
-#   }))
-# }
-
 variable "security_groups" {
 
   type = map(object({
@@ -74,6 +60,7 @@ variable "security_groups" {
     description = string
 
     ingress_rules = list(object({
+      description = string
       from_port   = number
       to_port     = number
       protocol    = string
@@ -82,4 +69,23 @@ variable "security_groups" {
 
   }))
 
+}
+
+variable "ami_id" {
+  type = string
+}
+
+variable "windows_ami_id" {
+  description = "AMI ID for Windows EC2 instance"
+  type        = string
+}
+
+variable "master_instance_type" {
+  type = string
+  # default = "t3.medium"
+}
+
+variable "worker_instance_type" {
+  type = string
+  # default = "t3.medium"
 }

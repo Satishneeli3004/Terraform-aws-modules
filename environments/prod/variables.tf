@@ -29,10 +29,7 @@ variable "private_route_table_name" {
   type = string
 }
 
-variable "private_subnet_cidrs" {
-  type        = list(string)
-  description = "CIDR blocks for private subnets"
-}
+
 
 variable "public_subnet_cidrs" {
   type        = list(string)
