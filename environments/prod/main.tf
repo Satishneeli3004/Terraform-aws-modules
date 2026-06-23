@@ -133,30 +133,6 @@ module "keypair" {
   tags = local.common_tags
 }
 
-module "Deploy-Bastion-Host" {
-
-  source = "../../modules/ec2"
-
-  instance_name = "Bastion-server"
-
-  ami_id = var.ami_id
-
-  instance_type = "t3.micro"
-  root_volume_size = 20
-
-  subnet_id = module.public_subnet.subnet_ids[0]
-
-  security_group_ids = [
-    module.security_groups["bastion"].security_group_id
-  ]
-
-  key_name = module.keypair.key_name
-
-  user_data = file("${path.module}/userdata/apache.sh")
-
-  tags = local.common_tags
-}
-
 # module "Deploy-Windows-server" {
 
 #   source = "../../modules/ec2"
@@ -182,162 +158,102 @@ module "Deploy-Bastion-Host" {
 #   tags = local.common_tags
 # }
 
-# module "appserver" {
 
-#   source = "../../modules/ec2"
+module "web-elk-server" {
 
-#   instance_name = "appserver"
+  source = "../../modules/ec2"
 
-#   ami_id = var.ami_id
-#   root_volume_size = 20
-  
-#   instance_type = "t3.micro"
+  instance_name = "web-server"
 
-#   subnet_id = module.private_subnet.subnet_ids[0]
+  ami_id = var.ami_id
 
-#   security_group_ids = [
-#     module.security_groups["bastion"].security_group_id
-#   ]
+  instance_type = "t3.small"
+  # instance_type    = "m7i-flex.large"
+  root_volume_size = 20
 
-#   key_name = module.keypair.key_name
+  subnet_id = module.public_subnet.subnet_ids[0]
 
-#   user_data = file("${path.module}/userdata/mysql.sh")
+  security_group_ids = [
+    module.security_groups["web-bastion-sg"].security_group_id
+  ]
 
-#   tags = local.common_tags
-# }
+  key_name = module.keypair.key_name
 
-# module "k8s_master" {
+  user_data = file("${path.module}/userdata/nginx.sh")
 
-#   source = "../../modules/k8s_node"
+  tags = local.common_tags
+}
 
-#   instance_name = "${var.client_name}-${var.environment}-master"
+module "elk-server-1" {
 
-#   ami_id = var.ami_id
+  source = "../../modules/ec2"
 
-#   instance_type = var.master_instance_type
+  instance_name = "elk-server-1"
 
-#   subnet_id = module.private_subnet.subnet_ids[0]
+  ami_id = var.ami_id
 
-#   security_group_ids = [
-#     module.security_groups["k8s-master"].security_group_id
-#   ]
+  # instance_type    = "t3.small"
+  instance_type    = "m7i-flex.large"
+  root_volume_size = 20
 
-#   key_name = module.keypair.key_name
+  subnet_id = module.private_subnet.subnet_ids[0]
 
-#   user_data = file("${path.module}/userdata/master.sh")
+  security_group_ids = [
+    module.security_groups["elk-sg"].security_group_id
+  ]
 
-#   volume_size = 20
+  key_name = module.keypair.key_name
 
-#   tags = local.common_tags
-# }
+  user_data = file("${path.module}/userdata/elk-server.sh")
 
-# module "worker1" {
+  tags = local.common_tags
+}
 
-#   source = "../../modules/k8s_node"
+module "elk-server-2" {
 
-#   instance_name = "${var.client_name}-${var.environment}-worker1"
+  source = "../../modules/ec2"
 
-#   ami_id = var.ami_id
+  instance_name = "elk-server-2"
 
-#   instance_type = var.worker_instance_type
+  ami_id = var.ami_id
 
-#   subnet_id = module.private_subnet.subnet_ids[0]
+  # instance_type    = "t3.small"
+  instance_type    = "m7i-flex.large"
+  root_volume_size = 20
 
-#   security_group_ids = [
-#     module.security_groups["k8s-worker"].security_group_id
-#   ]
+  subnet_id = module.private_subnet.subnet_ids[0]
 
-#   key_name = module.keypair.key_name
+  security_group_ids = [
+    module.security_groups["elk-sg"].security_group_id
+  ]
 
-#   user_data = file("${path.module}/userdata/worker1.sh")
+  key_name = module.keypair.key_name
 
-#   volume_size = 15
+  user_data = file("${path.module}/userdata/elk-server2.sh")
 
-#   tags = local.common_tags
-# }
+  tags = local.common_tags
+}
 
-# module "worker2" {
+module "appserver" {
 
-#   source = "../../modules/k8s_node"
+  source = "../../modules/ec2"
 
-#   instance_name = "${var.client_name}-${var.environment}-worker2"
+  instance_name = "app-server"
 
-#   ami_id = var.ami_id
+  ami_id           = var.ami_id
+  root_volume_size = 20
 
-#   instance_type = var.worker_instance_type
+  instance_type = "m7i-flex.large"
 
-#   subnet_id = module.private_subnet.subnet_ids[0]
+  subnet_id = module.private_subnet.subnet_ids[0]
 
-#   security_group_ids = [
-#     module.security_groups["k8s-worker"].security_group_id
-#   ]
+  security_group_ids = [
+    module.security_groups["app-sg"].security_group_id
+  ]
 
-#   key_name = module.keypair.key_name
+  key_name = module.keypair.key_name
 
-#   user_data = file("${path.module}/userdata/worker2.sh")
+  user_data = file("${path.module}/userdata/app-server.sh")
 
-#   volume_size = 15
-
-#   tags = local.common_tags
-# }
-
-# module "alb" {
-
-#   source = "../../modules/alb"
-
-#   alb_name = "${var.client_name}-${var.environment}-alb"
-
-#   subnet_ids = module.public_subnet.subnet_ids
-
-#   security_group_ids = [
-#     module.security_groups["alb"].security_group_id
-#   ]
-
-#   internal = false
-
-#   tags = local.common_tags
-# }
-
-# module "nginx_tg" {
-
-#   source = "../../modules/target_group"
-
-#   name = "nginx-ingress"
-
-#   port = 30080
-
-#   protocol = "HTTP"
-
-#   vpc_id = module.vpc.vpc_id
-
-#   tags = local.common_tags
-# }
-
-# module "worker_attachments" {
-
-#   for_each = {
-#     worker1 = module.worker1.instance_id
-#     worker2 = module.worker2.instance_id
-#   }
-
-#   source = "../../modules/target_group_attachment"
-
-#   target_group_arn = module.nginx_tg.target_group_arn
-
-#   target_id = each.value
-
-#   port = 30080
-# }
-
-# module "listener_http" {
-
-#   source = "../../modules/listener"
-
-#   load_balancer_arn = module.alb.alb_arn
-
-#   target_group_arn = module.nginx_tg.target_group_arn
-
-#   port = 80
-
-#   protocol = "HTTP"
-# }
+  tags = local.common_tags
+}

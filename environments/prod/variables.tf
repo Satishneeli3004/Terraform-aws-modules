@@ -78,10 +78,7 @@ variable "ami_id" {
   type = string
 }
 
-variable "windows_ami_id" {
-  description = "AMI ID for Windows EC2 instance"
-  type        = string
-}
+
 
 variable "master_instance_type" {
   type = string
