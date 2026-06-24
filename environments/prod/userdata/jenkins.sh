@@ -1,0 +1,21 @@
+#!/bin/bash
+set -euxo pipefail
+
+sudo apt install net-tools
+# Set hostname
+hostnamectl set-hostname jenkins
+
+apt-get update
+
+apt-get install -y ca-certificates curl gnupg lsb-release software-properties-common
+
+# Java
+apt-get install -y openjdk-21-jdk
+
+sudo wget -O /etc/apt/keyrings/jenkins-keyring.asc \
+  https://pkg.jenkins.io/debian-stable/jenkins.io-2026.key
+echo "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc]" \
+  https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
+  /etc/apt/sources.list.d/jenkins.list > /dev/null
+sudo apt update
+sudo apt install jenkins

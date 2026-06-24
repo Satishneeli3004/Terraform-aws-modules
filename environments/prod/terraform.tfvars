@@ -1,93 +1,15 @@
-environment              = "prod"
-client_name              = "arka"
+environment              = "UAT"
+client_name              = "test"
 project_name             = "networking"
-igw_name                 = "arka-prod-igw"
-nat_name                 = "arka-prod-nat"
-sg_name                  = "arka-prod-sg"
-# cidr_block               = "10.0.0.0/16"
+igw_name                 = "test-UAT-igw"
+nat_name                 = "test-UAT-nat"
+sg_name                  = "test-UAT-sg"
 cidr_block               = "192.0.0.0/16"
-vpc_name                 = "arka-prod-vpc"
+vpc_name                 = "test-UAT-vpc"
 public_route_table_name  = "public-rt"
 private_route_table_name = "private-rt"
-# private_subnet_cidrs     = ["10.0.4.0/24", "10.0.3.0/24"]
-# public_subnet_cidrs      = ["10.0.5.0/24", "10.0.2.0/24"]
-private_subnet_cidrs     = ["192.0.4.0/24", "192.0.3.0/24"]
-public_subnet_cidrs      = ["192.0.5.0/24", "192.0.2.0/24"]
-# security_groups = {
-
-#   bastion = {
-
-#     description = "SSH Access"
-
-#     ingress_rules = [
-#       {
-#         description = "SSH Access"
-#         from_port   = 22
-#         to_port     = 22
-#         protocol    = "tcp"
-#         cidr_blocks = ["0.0.0.0/0"]
-#       }
-#     ]
-#   }
-
-#   app = {
-
-#     description = "Application"
-
-#     ingress_rules = [
-#       {
-#         description = "HTTPS Access"
-#         from_port   = 443
-#         to_port     = 443
-#         protocol    = "tcp"
-#         cidr_blocks = ["0.0.0.0/0"]
-#       },
-#       {
-#         description = "SSH Access"
-#         from_port   = 22
-#         to_port     = 22
-#         protocol    = "tcp"
-#         cidr_blocks = ["0.0.0.0/0"]
-#       },
-#       {
-#         description = "Apache Tomcat port Range"
-#         from_port   = 80
-#         to_port     = 80
-#         protocol    = "tcp"
-#         cidr_blocks = ["0.0.0.0/0"]
-#       }
-#     ]
-#   }
-
-#   test = {
-
-#     description = "SSH Access"
-
-#     ingress_rules = [
-#       {
-#         description = "SSH Access"
-#         from_port   = 22
-#         to_port     = 22
-#         protocol    = "tcp"
-#         cidr_blocks = ["0.0.0.0/0"]
-#       }
-#     ]
-#   }
-#   central = {
-
-#     description = "SSH Access"
-
-#     ingress_rules = [
-#       {
-#         description = "SSH Access"
-#         from_port   = 22
-#         to_port     = 22
-#         protocol    = "tcp"
-#         cidr_blocks = ["0.0.0.0/0"]
-#       }
-#     ]
-#   }
-# }
+private_subnet_cidrs     = ["192.0.4.0/24"]
+public_subnet_cidrs      = ["192.0.5.0/24"]
 
 ami_id               = "ami-07a00cf47dbbc844c"
 windows_ami_id       = "ami-05fdee25803e36cbc"
@@ -96,49 +18,9 @@ master_instance_type = "t3.small"
 
 security_groups = {
 
-  bastion = {
+  jenkins = {
 
-    description = "Bastion"
-
-    ingress_rules = [
-
-      {
-        description = "SSH Access"
-        from_port   = 22
-        to_port     = 22
-        protocol    = "tcp"
-
-        cidr_blocks = [
-          "175.101.156.171/32"
-        ]
-      }
-
-    ]
-  }
-
-  windows = {
-
-    description = "windows-instance-sg"
-
-    ingress_rules = [
-
-      {
-        description = "RDP Access"
-        from_port   = 3389
-        to_port     = 3389
-        protocol    = "tcp"
-
-        cidr_blocks = [
-          "175.101.156.171/32"
-        ]
-      }
-
-    ]
-  }
-
-  k8s-master = {
-
-    description = "Kubernetes Master"
+    description = "Jenkins Server"
 
     ingress_rules = [
 
@@ -149,26 +31,27 @@ security_groups = {
         protocol    = "tcp"
 
         cidr_blocks = [
-          "10.0.0.0/16"
+          "175.101.156.163/32"  #Use Public IP
         ]
       },
 
       {
-        description = "Kubernetes API Server"
-        from_port   = 6443
-        to_port     = 6443
+        description = "Jenkins UI"
+        from_port   = 8080
+        to_port     = 8080
         protocol    = "tcp"
 
         cidr_blocks = [
-          "10.0.0.0/16"
+          "0.0.0.0/0"
         ]
       }
+
     ]
   }
 
-  k8s-worker = {
+  sonarqube = {
 
-    description = "Worker"
+    description = "SonarQube Server"
 
     ingress_rules = [
 
@@ -179,47 +62,22 @@ security_groups = {
         protocol    = "tcp"
 
         cidr_blocks = [
-          "10.0.0.0/16"
+          "175.101.156.163/32"  #Use Public IP
         ]
       },
 
       {
-        description = "Kubelet"
-        from_port   = 10250
-        to_port     = 10250
+        description = "SonarQube UI"
+        from_port   = 9000
+        to_port     = 9000
         protocol    = "tcp"
 
         cidr_blocks = [
-          "10.0.0.0/16"
+          "0.0.0.0/0"
         ]
       }
-    ]
-  }
-
-  alb = {
-
-    description = "ALB"
-
-    ingress_rules = [
-
-      {
-        description = "HTTP Access"
-        from_port   = 80
-        to_port     = 80
-        protocol    = "tcp"
-
-        cidr_blocks = ["0.0.0.0/0"]
-      },
-
-      {
-        description = "HTTPS Access"
-        from_port   = 443
-        to_port     = 443
-        protocol    = "tcp"
-
-        cidr_blocks = ["0.0.0.0/0"]
-      }
 
     ]
   }
+
 }

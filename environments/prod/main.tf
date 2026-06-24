@@ -13,7 +13,6 @@ module "security_groups" {
   tags = local.common_tags
 }
 
-
 module "vpc" {
   source = "../../modules/vpc"
 
@@ -30,7 +29,7 @@ module "public_subnet" {
 
   vpc_id = module.vpc.vpc_id
 
-  subnet_name = "public"
+  subnet_name = "public-subnet"
 
   # subnet_cidrs = [
   #   "10.0.1.0/24"
@@ -46,26 +45,6 @@ module "public_subnet" {
   tags          = local.common_tags
 }
 
-module "private_subnet" {
-  source = "../../modules/subnet"
-
-  vpc_id = module.vpc.vpc_id
-
-  subnet_name = "private"
-
-  # subnet_cidrs = [
-  #   "10.0.2.0/24"
-  # ]
-  subnet_cidrs = var.private_subnet_cidrs
-
-  availability_zones = [
-    "ap-south-1a",
-    "ap-south-1b"
-  ]
-
-  public_subnet = false
-  tags          = local.common_tags
-}
 
 module "igw" {
   source = "../../modules/internet_gateway"
@@ -75,17 +54,6 @@ module "igw" {
   # igw_name= var.igw_name
   igw_name = "${var.client_name}-${var.environment}-igw"
   tags     = local.common_tags
-}
-
-module "nat" {
-  source = "../../modules/nat_gateway"
-
-  public_subnet_id = module.public_subnet.subnet_ids[0]
-  # nat_name         = "dev-nat"
-  # nat_name= var.nat_name
-  nat_name   = "${var.client_name}-${var.environment}-nat"
-  depends_on = [module.igw]
-  tags       = local.common_tags
 }
 
 
@@ -106,23 +74,6 @@ module "public_rt" {
 }
 
 
-module "private_rt" {
-  source = "../../modules/route_table"
-
-  vpc_id = module.vpc.vpc_id
-
-  gateway_id = module.nat.nat_gateway_id
-
-  subnet_ids = module.private_subnet.subnet_ids
-
-  public = false
-
-  # route_table_name = "private-rt"
-  route_table_name = var.private_route_table_name
-  tags             = local.common_tags
-}
-
-
 
 module "keypair" {
 
@@ -133,211 +84,76 @@ module "keypair" {
   tags = local.common_tags
 }
 
-module "Deploy-Bastion-Host" {
+module "Jenkins" {
 
   source = "../../modules/ec2"
 
-  instance_name = "Bastion-server"
+  instance_name = "Jenkins-server"
 
   ami_id = var.ami_id
 
-  instance_type = "t3.micro"
+  instance_type    = "m7i-flex.large"
   root_volume_size = 20
 
   subnet_id = module.public_subnet.subnet_ids[0]
 
   security_group_ids = [
-    module.security_groups["bastion"].security_group_id
+    module.security_groups["jenkins"].security_group_id
   ]
 
   key_name = module.keypair.key_name
 
-  user_data = file("${path.module}/userdata/apache.sh")
+  user_data = file("${path.module}/userdata/jenkins.sh")
 
   tags = local.common_tags
 }
 
-# module "Deploy-Windows-server" {
 
-#   source = "../../modules/ec2"
-
-#   instance_name = "Windows-server"
-
-#   # ami_id = var.ami_id
-#   ami_id = var.windows_ami_id
-
-#   instance_type = "t3.micro"
-#   root_volume_size = 30
-
-#   subnet_id = module.public_subnet.subnet_ids[0]
-
-#   security_group_ids = [
-#     module.security_groups["windows"].security_group_id
-#   ]
-
-#   key_name = module.keypair.key_name
-
-#   user_data = file("${path.module}/userdata/apache.sh")
-
-#   tags = local.common_tags
-# }
-
-module "appserver" {
+module "SonarQube" {
 
   source = "../../modules/ec2"
 
-  instance_name = "appserver"
+  instance_name = "Sonar-server"
 
   ami_id = var.ami_id
-  root_volume_size = 20
-  
-  instance_type = "t3.micro"
 
-  subnet_id = module.private_subnet.subnet_ids[0]
+  instance_type    = "m7i-flex.large"
+  root_volume_size = 20
+
+  subnet_id = module.public_subnet.subnet_ids[0]
 
   security_group_ids = [
-    module.security_groups["bastion"].security_group_id
+    module.security_groups["sonarqube"].security_group_id
   ]
 
   key_name = module.keypair.key_name
 
-  user_data = file("${path.module}/userdata/mysql.sh")
+  user_data = file("${path.module}/userdata/sonar.sh")
 
   tags = local.common_tags
 }
 
-# module "k8s_master" {
+# module "appserver" {
 
-#   source = "../../modules/k8s_node"
+#   source = "../../modules/ec2"
 
-#   instance_name = "${var.client_name}-${var.environment}-master"
+#   instance_name = "appserver"
 
 #   ami_id = var.ami_id
+#   root_volume_size = 20
 
-#   instance_type = var.master_instance_type
+#   instance_type = "t3.micro"
 
 #   subnet_id = module.private_subnet.subnet_ids[0]
 
 #   security_group_ids = [
-#     module.security_groups["k8s-master"].security_group_id
+#     module.security_groups["bastion"].security_group_id
 #   ]
 
 #   key_name = module.keypair.key_name
 
-#   user_data = file("${path.module}/userdata/master.sh")
-
-#   volume_size = 20
+#   user_data = file("${path.module}/userdata/mysql.sh")
 
 #   tags = local.common_tags
 # }
 
-# module "worker1" {
-
-#   source = "../../modules/k8s_node"
-
-#   instance_name = "${var.client_name}-${var.environment}-worker1"
-
-#   ami_id = var.ami_id
-
-#   instance_type = var.worker_instance_type
-
-#   subnet_id = module.private_subnet.subnet_ids[0]
-
-#   security_group_ids = [
-#     module.security_groups["k8s-worker"].security_group_id
-#   ]
-
-#   key_name = module.keypair.key_name
-
-#   user_data = file("${path.module}/userdata/worker1.sh")
-
-#   volume_size = 15
-
-#   tags = local.common_tags
-# }
-
-# module "worker2" {
-
-#   source = "../../modules/k8s_node"
-
-#   instance_name = "${var.client_name}-${var.environment}-worker2"
-
-#   ami_id = var.ami_id
-
-#   instance_type = var.worker_instance_type
-
-#   subnet_id = module.private_subnet.subnet_ids[0]
-
-#   security_group_ids = [
-#     module.security_groups["k8s-worker"].security_group_id
-#   ]
-
-#   key_name = module.keypair.key_name
-
-#   user_data = file("${path.module}/userdata/worker2.sh")
-
-#   volume_size = 15
-
-#   tags = local.common_tags
-# }
-
-# module "alb" {
-
-#   source = "../../modules/alb"
-
-#   alb_name = "${var.client_name}-${var.environment}-alb"
-
-#   subnet_ids = module.public_subnet.subnet_ids
-
-#   security_group_ids = [
-#     module.security_groups["alb"].security_group_id
-#   ]
-
-#   internal = false
-
-#   tags = local.common_tags
-# }
-
-# module "nginx_tg" {
-
-#   source = "../../modules/target_group"
-
-#   name = "nginx-ingress"
-
-#   port = 30080
-
-#   protocol = "HTTP"
-
-#   vpc_id = module.vpc.vpc_id
-
-#   tags = local.common_tags
-# }
-
-# module "worker_attachments" {
-
-#   for_each = {
-#     worker1 = module.worker1.instance_id
-#     worker2 = module.worker2.instance_id
-#   }
-
-#   source = "../../modules/target_group_attachment"
-
-#   target_group_arn = module.nginx_tg.target_group_arn
-
-#   target_id = each.value
-
-#   port = 30080
-# }
-
-# module "listener_http" {
-
-#   source = "../../modules/listener"
-
-#   load_balancer_arn = module.alb.alb_arn
-
-#   target_group_arn = module.nginx_tg.target_group_arn
-
-#   port = 80
-
-#   protocol = "HTTP"
-# }
