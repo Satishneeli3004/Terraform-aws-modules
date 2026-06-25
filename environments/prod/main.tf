@@ -47,7 +47,6 @@ module "public_subnet" {
 }
 
 
-
 module "igw" {
   source = "../../modules/internet_gateway"
 
