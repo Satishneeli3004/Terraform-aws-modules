@@ -31,7 +31,7 @@ security_groups = {
         protocol    = "tcp"
 
         cidr_blocks = [
-          "175.101.156.163/32"  #Use Public IP
+          "175.101.156.223/32"  #Use Public IP
         ]
       },
 
@@ -62,7 +62,7 @@ security_groups = {
         protocol    = "tcp"
 
         cidr_blocks = [
-          "175.101.156.163/32"  #Use Public IP
+          "175.101.156.223/32"  #Use Public IP
         ]
       },
 
