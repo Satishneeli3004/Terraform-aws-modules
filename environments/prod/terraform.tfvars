@@ -13,6 +13,9 @@ private_route_table_name = "private-rt"
 # public_subnet_cidrs      = ["10.0.5.0/24", "10.0.2.0/24"]
 private_subnet_cidrs     = ["192.0.4.0/24", "192.0.3.0/24"]
 public_subnet_cidrs      = ["192.0.5.0/24", "192.0.2.0/24"]
+aws_region   = "ap-south-1"
+bucket_name = "satish-terraform-state-prod"
+dynamodb_name = "terraform-state-locks"
 # security_groups = {
 
 #   bastion = {

@@ -92,3 +92,16 @@ variable "worker_instance_type" {
   type = string
   # default = "t3.medium"
 }
+
+
+variable "aws_region" {
+  type = string
+}
+
+variable "bucket_name" {
+  type = string
+}
+
+variable "dynamodb_name" {
+  type = string
+}
