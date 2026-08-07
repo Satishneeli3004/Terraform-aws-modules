@@ -1,0 +1,617 @@
+ingress file:
+
+keycloak file:
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: keyc-ingress
+  namespace: ak-dr
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internal
+    alb.ingress.kubernetes.io/target-type: instance
+    alb.ingress.kubernetes.io/group.name : ak-4x-dr
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}, {"HTTP":80}]'
+    alb.ingress.kubernetes.io/subnets: subnet-0f92e0447eac82773,subnet-08d7bbb776644c668
+spec:
+  tls:
+    - hosts:
+        - prexdr-auth.akfincap.com
+      secretName: ingress-server-secret
+  rules:
+    - host: prexdr-auth.akfincap.com
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: keycloak-ui-service
+              port:
+                number: 80
+
+-----------------------------------------------------------------------------------------
+
+kong file:
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: kong-proxy
+  namespace: kong
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb
+    service.beta.kubernetes.io/aws-load-balancer-scheme: internal
+    service.beta.kubernetes.io/aws-load-balancer-subnets: subnet-00e154e6e9f20b863,subnet-0afa9269b5509b7a7
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
+spec:
+  type: LoadBalancer
+  selector:
+    app: ingress-kong
+  ports:
+  - name: proxy
+    port: 80
+    targetPort: 8000
+    protocol: TCP
+  - name: proxy-ssl
+    port: 443
+    targetPort: 8443
+    protocol: TCP
+
+-----------------------------------------------------------------------------------------
+
+
+MySQL deployment file
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pv-claim
+  namespace: ak-dr
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: efs-sc
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  namespace: ak-dr
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+      - image: mysql:5.7.31
+        name: mysql
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: "keYcloAkArd"
+        - name: MYSQL_DATABASE
+          value: "keyclak"
+        - name: MYSQL_USER
+          value: "keyclak"
+        - name: MYSQL_PASSWORD
+          value: "ak76ryg"
+        - name: MYSQL_ROOT_HOST
+          value: "%"
+        ports:
+        - containerPort: 3306
+          name: mysql
+        volumeMounts:
+        - name: mysql-persistent-storage
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: mysql-persistent-storage
+        persistentVolumeClaim:
+          claimName: mysql-pv-claim
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-service
+  namespace: ak-dr
+spec:
+  type: NodePort
+  ports:
+  - port: 3306
+  selector:
+    app: mysql
+
+
+
+---------------------------------------------------------------------------------------------
+
+admin ui file
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin-ui-service
+  namespace: ak-dr
+  labels:
+    app: admin-ui
+spec:
+  type: NodePort
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+    protocol: TCP
+  - name: https
+    port: 443
+    targetPort: 443
+    protocol: TCP
+  selector:
+    app: admin-ui
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin-ui
+  namespace: ak-dr
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: admin-ui
+  template:
+    metadata:
+      labels:
+        app: admin-ui
+    spec:
+      # ===== ADD THIS ENTIRE BLOCK =====
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: topology.kubernetes.io/zone
+                operator: In
+                values:
+                - ap-south-2b
+                - ap-south-2c
+      # ===== END OF ADDED BLOCK =====
+      containers:
+      - name: admin-ui
+        image: collectez:ak-los-4x-admin-ui-7_2026-08-05_20-25
+        resources:
+          requests:
+            cpu: 200m
+            memory: 200Mi
+        ports:
+        - containerPort: 80
+        - containerPort: 443
+        volumeMounts:
+          - name: ui-ssl
+            mountPath: /home/ubuntu/ssl
+      imagePullSecrets:
+              - name: regcred
+      volumes:
+        - name: ui-ssl
+          secret:
+            secretName: ui-ssl
+#---
+# apiVersion: k8s.nginx.org/v1alpha1
+# kind: TransportServer
+# metadata:
+#   name: admin-ui
+#   namespace: qa
+# spec:
+#   listener:
+#     name: tls-passthrough
+#     protocol: TLS_PASSTHROUGH
+#   host: qa-adminportal.ezee.ai
+#   upstreams:
+#   - name: admin-ui-service
+#     service: admin-ui-service
+#     port: 443
+#   action:
+#     pass: admin-ui-service
+---
+# autoscaling
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: admin-ui
+  namespace: ak-dr
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: admin-ui
+  minReplicas: 1
+  maxReplicas: 1
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 80
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: AverageValue
+        averageValue: 300000000
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Pods
+        value: 1
+        periodSeconds: 15
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+      - type: Pods
+        value: 1
+        periodSeconds: 15
+
+
+----------------------------------------------------------------------------------------------------------
+
+admin api file
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin-api-svc
+  namespace: ak-dr
+  labels:
+    app: admin-api
+spec:
+  type: NodePort
+  ports:
+  - name: https
+    port: 3000
+    targetPort: 3000
+    protocol: TCP
+  selector:
+    app: admin-api
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin-api
+  namespace: ak-dr
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: admin-api
+  template:
+    metadata:
+      labels:
+        app: admin-api
+    spec:
+      # ===== ADD THIS ENTIRE BLOCK =====
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: topology.kubernetes.io/zone
+                operator: In
+                values:
+                - ap-south-2b
+                - ap-south-2c
+      # ===== END OF ADDED BLOCK =====
+      #affinity:
+      # nodeAffinity:
+      #   requiredDuringSchedulingIgnoredDuringExecution:
+      #     nodeSelectorTerms:
+      #     - matchExpressions:
+      #       - key: diskType
+      #         operator: In
+      #         values:
+      #         - kdd
+      containers:
+      - name: admin-api
+        image: latitudedocker/ak-los-4x-admin-api:16_2026-08-05_20-21
+        resources:
+          requests:
+            cpu: 400m
+            memory: 600Mi
+        ports:
+        - containerPort: 3000
+        volumeMounts:
+          - name: api-ssl
+            mountPath: /data/ssl/
+          - name: admin
+            mountPath: /usr/src/app/logs/
+      imagePullSecrets:
+      - name: regcred
+      volumes:
+        - name: api-ssl
+          secret:
+            secretName: api-ssl
+        - name: admin
+          persistentVolumeClaim:
+            claimName: adminclaim
+---
+# autoscaling
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: admin-api
+  namespace: ak-dr
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: admin-api
+  minReplicas: 1
+  maxReplicas: 2
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 85
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: AverageValue
+        averageValue: 500000000
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Pods
+        value: 1
+        periodSeconds: 15
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+      - type: Pods
+        value: 1
+        periodSeconds: 15
+
+---------------------------------------------------------------------------------------------------------------
+
+kong -ingress file
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: konga-dashboard
+  namespace: kong
+  annotations:
+    konghq.com/strip-path: "true"
+spec:
+  ingressClassName: kong
+  tls:
+  - hosts:
+    - prexdr-marketplace.com
+    secretName: konga-server-secret
+  rules:
+    - host: prexdr-marketplace.com
+      http:
+        paths:
+        - path: /ezeeAPI
+          pathType: Prefix
+          backend:
+            service:
+              name: kong-admin
+              port:
+                number: 81
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: konga-svc
+              port:
+                number: 443
+
+
+-----------------------------------------------------------------------------------------------------------
+
+kong-admin-deployment yaml
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kong-admin
+  namespace: kong
+spec:
+  ports:
+  - name: admin
+    port: 80
+    protocol: TCP
+    targetPort: 8001
+  - name: admin-proxy
+    port: 81
+    protocol: TCP
+    targetPort: 8000
+  - name: admin-ssl
+    port: 443
+    targetPort: 8444
+    protocol: TCP
+  selector:
+    app: kong-admin
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: kong-admin
+  name: kong-admin
+  namespace: kong
+spec:
+  selector:
+    matchLabels:
+      app: kong-admin
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: kong-admin
+    spec:
+      containers:
+      - name: admin-api
+        image: latitudedocker/collectez:jb-aks-prod-kong-6_2024-12-02_20-33
+        env:
+        - name: KONG_DATABASE
+          value: postgres
+        - name: KONG_PG_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: kongcreds
+              key: postgresdbname
+        - name: KONG_PG_USER
+          valueFrom:
+            secretKeyRef:
+              name: kongcreds
+              key: username
+        - name: KONG_PG_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: kongcreds
+              key: password
+        - name: KONG_DECLARATIVE_CONFIG
+          value: /etc/kong/declarative/kong.yml
+        - name: KONG_PG_HOST
+          value: postgres
+        - name: KONG_PG_PORT
+          value: "5432"
+        - name: KONG_ADMIN_ACCESS_LOG
+          value: /dev/stdout
+        - name: KONG_ADMIN_ERROR_LOG
+          value: /dev/stderr
+        - name: KONG_ADMIN_LISTEN
+          value: 0.0.0.0:8001
+        - name: KONG_PROXY_LISTEN
+          value: 0.0.0.0:8000
+        - name: KONG_CASSANDRA_CONTACT_POINTS
+          value: postgres
+        - name: KONG_PROXY_ACCESS_LOG
+          value: /dev/stdout
+        - name: KONG_PROXY_ERROR_LOG
+          value: /dev/stderr
+        - name: KONG_PREFIX
+          value: /var/run/kong
+        - name: KONG_PLUGINSERVER_NAMES
+          value: js
+        - name: KONG_PLUGINSERVER_JS_SOCKET
+          value: /usr/local/kong/js_pluginserver.sock
+        - name: KONG_PLUGINSERVER_JS_START_CMD
+          value: /usr/local/bin/kong-js-pluginserver -v --plugins-directory /usr/local/kong/js-plugins
+        - name: KONG_PLUGINSERVER_JS_QUERY_CMD
+          value: /usr/local/bin/kong-js-pluginserver --plugins-directory /usr/local/kong/js-plugins --dump-all-plugins
+        - name: KONG_PLUGINS
+          value: bundled,digilockerredirect,querytobodyparam
+        - name: KONG_LOG_LEVEL
+          value: debug
+        - name: REAL_IP_HEADER
+          value: X-Forwarded-For
+        - name: KONG_TRUSTED_IPS
+          value: 0.0.0.0/0,::/0
+        - name: KONG_REAL_IP_RECURSIVE
+          value: "on"
+        ports:
+        - name: kong-admin-port
+          containerPort: 8001
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /status
+            port: 8001
+            scheme: HTTP
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 3
+        volumeMounts:
+        - mountPath: /var/run/kong
+          name: kong-prefix-vol
+        - mountPath: /tmp
+          name: plugins
+      volumes:
+      - name: kong-prefix-vol
+        emptyDir: {}
+      - name: plugins
+        emptyDir: {}
+          # affinity:
+          # nodeAffinity:
+          # requiredDuringSchedulingIgnoredDuringExecution:
+          # nodeSelectorTerms:
+          # - matchExpressions:
+          #   - key: special
+          #     operator: In
+          #     values:
+          #     - "true"
+      imagePullSecrets:
+      - name: regcred
+---
+# autoscaling
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: kong-admin
+  namespace: kong
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: kong-admin
+  minReplicas: 1
+  maxReplicas: 1
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 20
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: AverageValue
+        averageValue: 300000000
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Pods
+        value: 1
+        periodSeconds: 15
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+      - type: Pods
+        value: 1
+        periodSeconds: 15
+
+
